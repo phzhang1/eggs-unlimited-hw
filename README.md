@@ -13,7 +13,7 @@ pip install -r requirements.txt
 uvicorn app:app --reload
 ```
 
-<!-- FILL IN PHASE 1: confirm requirements.txt exists and all deps are pinned -->
+Dependencies are pinned in `requirements.txt` for reproducible installs.
 
 ---
 
