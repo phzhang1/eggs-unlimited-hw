@@ -78,22 +78,13 @@ pytest -v
 
 ## Decisions & Trade-offs
 
-Each bullet corresponds to a conscious architectural choice. One-sentence rationale is filled in after the code exists (Phase 6).
+Phase 2 Choices (data model + DB layer):
 
-- **§6.1 Project layout** — _TODO: one-sentence why_
-- **§6.2 Pydantic model design** — _TODO: one-sentence why_
-- **§6.3 Database schema** — _TODO: one-sentence why_
-- **§6.4 SQLite connection lifecycle** — _TODO: one-sentence why_
-- **§6.5 Validation strategy** — _TODO: one-sentence why_
-- **§6.6 Frontend rendering pattern** — _TODO: one-sentence why_
-- **§6.7 Endpoint URL ambiguity (`/export.csv` vs `/exportcsv`)** — _TODO: one-sentence why_
-- **§6.8 CSV export implementation** — _TODO: one-sentence why_
-- **§6.9 Logging** — _TODO: one-sentence why_
-- **§6.10 Error UX (friendly 422 messages)** — _TODO: one-sentence why_
-- **§6.11 Test scope** — _TODO: one-sentence why_
-- **§6.12 README diagram** — _TODO: one-sentence why_
-- **§6.13 Run command** — _TODO: one-sentence why_
-- **§6.14 Repo hygiene** — _TODO: one-sentence why_
+- **Pydantic model design (flat vs nested)** — I used a flat `EggRequest` model because the fields are simple attributes of a single record, and do not form reusuable sub-objects. Nesting would add unnecessary mapping complexity.
+- **Enum-backed fields** — I used enums to centralize allowed values in named types (`EggType`, `EggSize`, etc.), which keeps validation rules explicit and reusable in code vs. repeating raw string lists inline. I also mirror the same set in SQLite `CHECK` constraints for defense-in-depth.
+- **Database schema shape** — I used one denormalized `entries` table since the app stores a single request record type with small and fixed enum sets. Normalizing into lookup tables would add joins and extra query logic with little practical benefits at this scale.
+- **Startup initialization (`lifespan`)** — I run `init_db()` in FastAPI's lifespan startup so a fresh clone creates the table automatically before serving requests.
+- **SQLite connection lifecycle** — After startup, each request opens its own SQLite connection and closes it in a dependency `finally` block, which prevents leaks and keeps runtime behavior reliable.
 
 ---
 
