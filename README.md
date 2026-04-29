@@ -80,13 +80,19 @@ pytest -v
 
 Phase 2 Choices (data model + DB layer):
 
-- **Pydantic model design (flat vs nested)** — I used a flat `EggRequest` model because the fields are simple attributes of a single record, and do not form reusuable sub-objects. Nesting would add unnecessary mapping complexity.
-- **Enum-backed fields** — I used enums to centralize allowed values in named types (`EggType`, `EggSize`, etc.), which keeps validation rules explicit and reusable in code vs. repeating raw string lists inline. I also mirror the same set in SQLite `CHECK` constraints for defense-in-depth.
-- **Database schema shape** — I used one denormalized `entries` table since the app stores a single request record type with small and fixed enum sets. Normalizing into lookup tables would add joins and extra query logic with little practical benefits at this scale.
-- **Startup initialization (`lifespan`)** — I run `init_db()` in FastAPI's lifespan startup so a fresh clone creates the table automatically before serving requests.
-- **SQLite connection lifecycle** — After startup, each request opens its own SQLite connection and closes it in a dependency `finally` block, which prevents leaks and keeps runtime behavior reliable.
+- **Pydantic model design (flat vs nested)**: I used a flat `EggRequest` model because the fields are simple attributes of a single record, and do not form reusuable sub-objects. Nesting would add unnecessary mapping complexity.
+- **Enum-backed fields**: I used enums to centralize allowed values in named types (`EggType`, `EggSize`, etc.), which keeps validation rules explicit and reusable in code vs. repeating raw string lists inline. I also mirror the same set in SQLite `CHECK` constraints for defense-in-depth.
+- **Database schema shape**: I used one denormalized `entries` table since the app stores a single request record type with small and fixed enum sets. Normalizing into lookup tables would add joins and extra query logic with little practical benefits at this scale.
+- **Startup initialization (`lifespan`)**: I run `init_db()` in FastAPI's lifespan startup so a fresh clone creates the table automatically before serving requests.
+- **SQLite connection lifecycle**: After startup, each request opens its own SQLite connection and closes it in a dependency `finally` block, which prevents leaks and keeps runtime behavior reliable.
 
----
+Phase 3 Choices (endpoints and validation)
+- **CSV route ambiguity (`/export.csv` vs `/exportcsv`)**: Register both paths on one handler to match spec wording differences.
+- **Friendly validation error**: Added a customer `RequestValidationError` handler returning `{"errors":[{"field","message}]}` so frontend can map errors directly to inputs instead of FastAPI's default `detail` structure.
+- **CSV generation approach**: Used `csv.DictWriter` + `io.StringIO` in-memory because dataset size is small; streaming would add complexity with little value for the scope of the assignment.
+- **Entries ordering**: `Get /entries` returns newest first (`ORDER BY created_at DESC`) so recent submissions appear at top of the UI table.
+- **Server-side UUID generation in `POST /submit`**: Keeps ID creation authoritative on backend and matches spec reponse `{"id": "<uuid>"}`.
+<!-- ---
 
 ## What I'd Add With More Time
 
@@ -97,13 +103,13 @@ Phase 2 Choices (data model + DB layer):
 - A `DELETE /entries/{id}` endpoint
 - Postgres + connection pool if the app ever needed to handle more than one concurrent user
 
----
+--- -->
 
-## Walkthrough Cheat Sheet
+<!-- ## Walkthrough Cheat Sheet
 
 See [AGENTS.md §8](AGENTS.md#8-walkthrough-defense-cheat-sheet) for likely reviewer questions and short, defendable answers.
 
-> Note: If `AGENTS.md` is not shipped in the final repo, inline the cheat sheet here during Phase 6.
+> Note: If `AGENTS.md` is not shipped in the final repo, inline the cheat sheet here during Phase 6. -->
 
 ---
 
