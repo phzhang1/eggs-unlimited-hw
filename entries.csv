@@ -1,0 +1,4 @@
+id,created_at,farm_name,contact,location,type,size,grade,pack,quantity_value,quantity_unit,phone_email,price_per_dozen,available_start,available_end,notes
+e1d11c51-69c7-440d-ab5a-835d55ba821e,2026-05-01 21:58:03,Hidden Valley,Bob Marley,Irvine,CageFree,Large,A,18ct_carton,150.0,dozen,,,2026-05-01,2026-05-21,
+136c82d1-4983-4f3f-bac2-c45fceeadfd0,2026-05-01 01:48:58,Per,Me,94133,CageFree,Large,AA,12ct_carton,12.0,dozen,,,,,
+ccdf6bbc-9ea9-4bc3-b8ee-c578038066f8,2026-04-29 20:07:14,Acme,Jane,94110,Organic,Large,AA,12ct_carton,12.0,dozen,,,,,
