@@ -41,6 +41,19 @@ flowchart LR
 
 ---
 
+## Assumptions
+
+- **Homework scope, not production**: This app satisfies the assignment rubric; it is not hardened for public deployment. 
+- **Single local user** — There are no users or roles in the spec, so there is no auth or session layer; every visitor uses the same shared list of submissions.
+- **Small dataset**: No pagination, search, or filtering on `GET /entries`; the spec does not require them and the expected volume is tiny.
+- **Local-only**: No cloud, Docker, or managed services; running on your machine matches the spec and keeps setup minimal.
+- **SQLite is enough**: One denormalized table and low concurrency; a heavier database would add operational overhead without changing the outcome for this brief.
+- **Dual CSV routes**: Both `/export.csv` and `/exportcsv` are registered because the assignment wording listed both; one handler serves both paths.
+- **Sync `sqlite3`**: The stdlib driver is synchronous and connection-per-request; an async driver would add complexity without a concurrency benefit at this scale.
+- **`entries.db` is not committed**: The SQLite file is gitignored and created on first run via startup `init_db()` so clones start clean.
+
+---
+
 ## Form Fields & Validation
 
 Fields marked **required** must be present in every submission. Enum values are the only accepted strings for those fields.
@@ -96,10 +109,10 @@ Phase 2 Choices (data model + DB layer):
 
 Phase 3 Choices (endpoints and validation)
 - **CSV route ambiguity (`/export.csv` vs `/exportcsv`)**: Register both paths on one handler to match spec wording differences.
-- **Friendly validation error**: Added a customer `RequestValidationError` handler returning `{"errors":[{"field","message}]}` so frontend can map errors directly to inputs instead of FastAPI's default `detail` structure.
+- **Friendly validation error**: Added a custom `RequestValidationError` handler returning `{"errors":[{"field":"farm_name","message":"Field required"}]}` so frontend can map errors directly to inputs instead of FastAPI's default `detail` structure.
 - **CSV generation approach**: Used `csv.DictWriter` + `io.StringIO` in-memory because dataset size is small; streaming would add complexity with little value for the scope of the assignment.
 - **Entries ordering**: `Get /entries` returns newest first (`ORDER BY created_at DESC`) so recent submissions appear at top of the UI table.
-- **Server-side UUID generation in `POST /submit`**: Keeps ID creation authoritative on backend and matches spec reponse `{"id": "<uuid>"}`.
+- **Server-side UUID generation in `POST /submit`**: Keeps ID creation authoritative on backend by letting the API create an ID not the user or database auto increment and matches spec response `{"id": "<uuid>"}`.
 
 Phase 4 Choices (frontend)
 - **`novalidate` on the form**: Disabled browser-native HTML5 validation popups so all error feedback flows through the custom 422 inline error path, giving consistent styling on every field. The `required` attributes are still present for semantics and screen readers.
@@ -111,38 +124,5 @@ Phase 4 Choices (frontend)
 Phase 5 Choices (tests)
 - **Three tests vs. the spec's "at least one"**: Each test maps directly to a rubric line — healthz (200 OK), round-trip (data sent + listable + multiple entries), 422 (friendly-error bonus). The cost is ~55 lines and proves deliberate coverage rather than a single token check.
 - **`tmp_path` temp file instead of SQLite `:memory:`**: An in-memory SQLite database is per-connection. With a per-request connection model, each route handler would open a fresh empty DB and see no data. A temp file behaves identically to the production DB while staying isolated per test.
-- **`dependency_overrides` to swap the DB connection**: FastAPI's documented test pattern for replacing a `Depends()` target without touching production code. Cleaner than monkey-patching `DB_PATH` because the override is scoped to the fixture and cleared automatically in `finally`.
+- **`dependency_overrides` for tests**: For each test, FastAPI temporarily swaps out `get_db` with a fake version that talks to a temp database, then removes that swap when the test ends. That beats changing a global `DB_PATH` and hoping you remember to change it back.
 - **`init_db` refactored to accept an optional connection**: Avoids duplicating the `CREATE TABLE` SQL between `app.py` and the test fixture. When called with no argument (startup), it opens its own connection; when called with a connection (test fixture), it uses that one. One source of truth for the schema definition.
-<!-- ---
-
-## What I'd Add With More Time
-
-- Pagination on `/entries` (no filtering in scope, but the list will grow)
-- CSRF protection on the form
-- Structured logging (JSON lines, request-id header)
-- A small Playwright end-to-end test alongside the pytest unit tests
-- A `DELETE /entries/{id}` endpoint
-- Postgres + connection pool if the app ever needed to handle more than one concurrent user
-
---- -->
-
-<!-- ## Walkthrough Cheat Sheet
-
-See [AGENTS.md §8](AGENTS.md#8-walkthrough-defense-cheat-sheet) for likely reviewer questions and short, defendable answers.
-
-> Note: If `AGENTS.md` is not shipped in the final repo, inline the cheat sheet here during Phase 6. -->
-
----
-
-<!--
-BRAINSTORM — fill this in before Phase 1; delete or keep private
-
-1. What's the one thing about this project I'm least sure I can defend in 30 seconds?
-   [your answer here]
-
-2. Which of the 14 §6 decisions feel arbitrary to me, and what would I prefer to do instead?
-   [your answer here]
-
-3. Which form field do I expect to be hardest to validate cleanly?
-   [your answer here]
--->
