@@ -79,13 +79,20 @@ Three tests run against isolated temp SQLite files — the production `entries.d
 
 ## Decisions & Trade-offs
 
+Phase 1 Choices (bootstrap):
+- **Dependency management (`venv` + `requirements.txt`)**: Used standard `python -m venv` and a pinned `requirements.txt` over tools like Poetry for ease of reproducibility without extra software.
+- **Health endpoint only in bootstrap**: Setup only health check endpoint for quick readiness check, smoke tests and environment verification to reduce debugging surface early.
+- **`StaticFiles` mount with a placeholder `index.html`**: Set up static serving early so the frontend files have a clear place to live before building the full UI.
+- **Route registration order (mount last)**: `app.mount("/", ...)` is placed after all API routes because FastAPI matches paths top-to-bottom and a root catch-all would intercept API requests if registered first.
+- **Logging via default uvicorn access logs**: No custom middleware added since uvicorn already prints method, path, and status per request, which satisfies the rubric requirement with zero extra code.
+
 Phase 2 Choices (data model + DB layer):
 
 - **Pydantic model design (flat vs nested)**: I used a flat `EggRequest` model because the fields are simple attributes of a single record, and do not form reusuable sub-objects. Nesting would add unnecessary mapping complexity.
-- **Enum-backed fields**: I used enums to centralize allowed values in named types (`EggType`, `EggSize`, etc.), which keeps validation rules explicit and reusable in code vs. repeating raw string lists inline. I also mirror the same set in SQLite `CHECK` constraints for defense-in-depth.
-- **Database schema shape**: I used one denormalized `entries` table since the app stores a single request record type with small and fixed enum sets. Normalizing into lookup tables would add joins and extra query logic with little practical benefits at this scale.
+- **Enum-backed fields**: I used enums to centralize allowed values in named types (`EggType`, `EggSize`, etc.), which keeps validation rules explicit and avoids repeating the same validation logic in multiple places. 
+- **Database schema shape**: I used one denormalized `entries` table because the scope is a single submission entity. If the domain expanded into separate reusable entities (for example shops, users, shipments), I would normalize into related tables with foreign keys.
 - **Startup initialization (`lifespan`)**: I run `init_db()` in FastAPI's lifespan startup so a fresh clone creates the table automatically before serving requests.
-- **SQLite connection lifecycle**: After startup, each request opens its own SQLite connection and closes it in a dependency `finally` block, which prevents leaks and keeps runtime behavior reliable.
+- **SQLite connection lifecycle**: Each request opens its own SQLite connection via FastAPI `Depends(get_db)` and closes it afterward, avoiding leaked connections and a shared long-lived connection under concurrency.
 
 Phase 3 Choices (endpoints and validation)
 - **CSV route ambiguity (`/export.csv` vs `/exportcsv`)**: Register both paths on one handler to match spec wording differences.

@@ -162,7 +162,7 @@ def list_entries(conn: sqlite3.Connection = Depends(get_db)):
     return [dict(row) for row in rows]
 
 
-# two gets for same endpoint: handles spellings from spec (not post because it reads and returns data, no action)
+# two gets for same endpoint: handles spellings from spec (not POST because it reads and returns data, no action)
 @app.get("/export.csv")
 @app.get("/exportcsv")
 def export_csv(conn: sqlite3.Connection = Depends(get_db)):
