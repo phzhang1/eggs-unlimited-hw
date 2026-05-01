@@ -92,6 +92,13 @@ Phase 3 Choices (endpoints and validation)
 - **CSV generation approach**: Used `csv.DictWriter` + `io.StringIO` in-memory because dataset size is small; streaming would add complexity with little value for the scope of the assignment.
 - **Entries ordering**: `Get /entries` returns newest first (`ORDER BY created_at DESC`) so recent submissions appear at top of the UI table.
 - **Server-side UUID generation in `POST /submit`**: Keeps ID creation authoritative on backend and matches spec reponse `{"id": "<uuid>"}`.
+
+Phase 4 Choices (frontend)
+- **`novalidate` on the form**: Disabled browser-native HTML5 validation popups so all error feedback flows through the custom 422 inline error path, giving consistent styling on every field. The `required` attributes are still present for semantics and screen readers.
+- **Empty optional fields stripped client-side**: `FormData` returns `""` for untouched inputs; stripping those keys before `JSON.stringify` lets Pydantic see them as absent (→ `None`) rather than as the empty string `""`, so required/optional distinctions work as expected.
+- **Numeric coercion via `Number()`**: `FormData` returns all values as strings; `quantity_value` and `price_per_dozen` are cast with `Number()` before posting so Pydantic receives a float, not a string.
+- **`loadEntries()` on page load and after submit**: The table is rebuilt from `GET /entries` on initial load and after each successful `POST /submit` so that the database is accurate.
+- **Single `index.html` with inline `<script>`**: Keeps the entire frontend in one file with zero build tooling, consistent with the assignment's no-bundler constraint and easy to walk through line-by-line.
 <!-- ---
 
 ## What I'd Add With More Time
