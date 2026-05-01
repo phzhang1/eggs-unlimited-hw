@@ -68,11 +68,12 @@ Validation is enforced at three layers: HTML5 `required` attributes (UX), Pydant
 
 ## Running the Tests
 
-<!-- FILL IN PHASE 5 -->
-
 ```bash
+source .venv/bin/activate
 pytest -v
 ```
+
+Three tests run against isolated temp SQLite files — the production `entries.db` is never touched. See `tests/conftest.py` for how `dependency_overrides` swaps the DB connection per test.
 
 ---
 
@@ -99,6 +100,12 @@ Phase 4 Choices (frontend)
 - **Numeric coercion via `Number()`**: `FormData` returns all values as strings; `quantity_value` and `price_per_dozen` are cast with `Number()` before posting so Pydantic receives a float, not a string.
 - **`loadEntries()` on page load and after submit**: The table is rebuilt from `GET /entries` on initial load and after each successful `POST /submit` so that the database is accurate.
 - **Single `index.html` with inline `<script>`**: Keeps the entire frontend in one file with zero build tooling, consistent with the assignment's no-bundler constraint and easy to walk through line-by-line.
+
+Phase 5 Choices (tests)
+- **Three tests vs. the spec's "at least one"**: Each test maps directly to a rubric line — healthz (200 OK), round-trip (data sent + listable + multiple entries), 422 (friendly-error bonus). The cost is ~55 lines and proves deliberate coverage rather than a single token check.
+- **`tmp_path` temp file instead of SQLite `:memory:`**: An in-memory SQLite database is per-connection. With a per-request connection model, each route handler would open a fresh empty DB and see no data. A temp file behaves identically to the production DB while staying isolated per test.
+- **`dependency_overrides` to swap the DB connection**: FastAPI's documented test pattern for replacing a `Depends()` target without touching production code. Cleaner than monkey-patching `DB_PATH` because the override is scoped to the fixture and cleared automatically in `finally`.
+- **`init_db` refactored to accept an optional connection**: Avoids duplicating the `CREATE TABLE` SQL between `app.py` and the test fixture. When called with no argument (startup), it opens its own connection; when called with a connection (test fixture), it uses that one. One source of truth for the schema definition.
 <!-- ---
 
 ## What I'd Add With More Time

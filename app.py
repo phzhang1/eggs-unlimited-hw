@@ -69,8 +69,11 @@ class EggRequest(BaseModel):
 DB_PATH = "entries.db"
 
 
-def init_db() -> None:
-    conn = sqlite3.connect(DB_PATH)
+def init_db(conn: sqlite3.Connection | None = None) -> None:
+    # accept temporary connection to allow testing
+    own_conn = conn is None
+    if own_conn:
+        conn = sqlite3.connect(DB_PATH)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS entries (
             id               TEXT PRIMARY KEY,
@@ -92,7 +95,8 @@ def init_db() -> None:
         )
     """)
     conn.commit()
-    conn.close()
+    if own_conn:
+        conn.close()
 
 # Lifespan: runs once at startup and prevents manual database initialization
 
