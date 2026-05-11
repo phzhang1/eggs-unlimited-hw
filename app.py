@@ -9,7 +9,7 @@ from fastapi import Depends, FastAPI, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # Enums: a controlled list of allowed values (prevent bad data and validate automatically)
@@ -46,15 +46,15 @@ class EggPack(str, Enum):
 
 class EggRequest(BaseModel):
     # Required fields (no default means Pydantic rejects missing values)
-    farm_name:      str
-    contact:        str       # contact person's name
-    location:       str       # ZIP code or city
+    farm_name:      str = Field(min_length=1)
+    contact:        str = Field(min_length=1)  # contact person's name
+    location:       str = Field(min_length=1)  # ZIP code or city
     type:           EggType
     size:           EggSize
     grade:          EggGrade
     pack:           EggPack
-    quantity_value: float     # Pydantic rejects non-numeric input
-    quantity_unit:  str      
+    quantity_value: float                      # Pydantic rejects non-numeric input
+    quantity_unit:  str = Field(min_length=1)
 
     # Optional fields (spec does not list these as required)
     phone_email:     str | None   = None  # phone or email (separate from contact name)
